@@ -11,7 +11,6 @@
     Fore more details:
     * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
   -->
-  <base href="/">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
@@ -28,11 +27,56 @@
 
   <title>flutter_web_dashboard</title>
   <link rel="manifest" href="manifest.json">
-</head>
-<body>
-  <!-- This script installs service_worker.js to provide PWA functionality to
-       application. For more information, see:
-       https://developers.google.com/web/fundamentals/primers/service-workers -->
+  
+  <script>
+    // Patch wheel deltaMode
+    (function() {
+      function overrideProp(obj, name, descriptor) {
+        var prevDescriptor = Object.getOwnPropertyDescriptor(obj, name);
+      
+        if (!!descriptor.get) {
+          var _get = descriptor.get;
+          descriptor.get = function() {
+            var value = (!!prevDescriptor && !!prevDescriptor.get) ? prevDescriptor.get.call(this) : null;
+            return _get.call(this, value);
+          }
+        }
+        if (!!descriptor.set) {
+          var _set = descriptor.set;
+          descriptor.set = function(value) {
+            if (_set(value) !== false && (!!prevDescriptor && !!prevDescriptor.set)) {
+              prevDescriptor.set.call(this, value);
+            }
+          }
+        }
+      
+        Object.defineProperty(obj, name, descriptor);
+      }
+      
+      var isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+      if (isFirefox) {
+        var syntheticEvent = new WheelEvent("syntheticWheel", {"deltaX": 4, "deltaMode": 0});
+        if (syntheticEvent.deltaMode == 0) {
+          overrideProp(WheelEvent.prototype, 'deltaMode', {
+            get: function(value) {
+              return 1; // DOM_DELTA_LINE
+            }
+          });
+          overrideProp(WheelEvent.prototype, 'deltaX', {
+            get: function(value) {
+              return value * 3; // 3 per scroll
+            }
+          });
+          overrideProp(WheelEvent.prototype, 'deltaY', {
+            get: function(value) {
+              return value * 3; // 3 line per scroll
+            }
+          });
+        }
+      }
+    })();
+  </script>
+ 
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('flutter-first-frame', function () {
@@ -48,6 +92,13 @@
       window.flutterWebRenderer = "canvaskit";
     }
   </script>
+  
+</head>
+<body>
+  <!-- This script installs service_worker.js to provide PWA functionality to
+       application. For more information, see:
+       https://developers.google.com/web/fundamentals/primers/service-workers -->
+ 
   <script src="main.dart.js" type="application/javascript"></script>
 </body>
 </html>
